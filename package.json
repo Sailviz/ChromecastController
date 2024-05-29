@@ -1,0 +1,33 @@
+{
+  "private": true,
+  "scripts": {
+    "dev": "nodemon",
+    "build": "next build && tsc --project tsconfig.server.json",
+    "start": "cross-env NODE_ENV=production node dist/server/index.jsx"
+  },
+  "dependencies": {
+    "@astronautlabs/mdns": "^1.0.10",
+    "@prisma/client": "^3.13.1",
+    "@types/castv2": "^0.1.1",
+    "@types/express": "^4.17.13",
+    "castv2": "^0.1.10",
+    "cross-env": "^7.0.2",
+    "dotenv": "^10.0.0",
+    "express": "^4.17.1",
+    "jsonwebtoken": "^8.5.1",
+    "next": "latest",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
+    "socket.io": "^4.7.2"
+  },
+  "devDependencies": {
+    "@types/next": "^9.0.0",
+    "@types/node": "^12.0.12",
+    "@types/react": "^16.9.44",
+    "@types/react-dom": "^16.9.8",
+    "nodemon": "^2.0.4",
+    "prisma": "^3.13.1",
+    "ts-node": "^8.10.2",
+    "typescript": "4.3.5"
+  }
+}
