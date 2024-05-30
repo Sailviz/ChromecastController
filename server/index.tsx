@@ -24,11 +24,46 @@ nextApp.prepare().then(async () => {
             socket.disconnect()
         })
 
-        socket.on("Register", async () => {
-
+        socket.on("register", async (clubId: string, callback) => {
+            clubId = clubId
+            callback("success")
         })
 
-    });
+        socket.on("getAvailableCasts", async (callback) => {
+            callback({ casts: devices })
+        });
+
+        socket.on("connectCast", async (host: any, callback) => {
+            console.log(host)
+            const cast = client.devices.find((d: any) => d.host === host)
+            cast.play("", "customreceiver", function (err: any) {
+                if (!err) callback({ status: true, cast: { host: cast.host, name: cast.friendlyName } })
+            })
+            var index = devices.findIndex((d: any) => d.host === cast.host)
+            devices[index] = { host: cast.host, name: cast.friendlyName, connected: true }
+
+            console.log("updated: " + cast.host + " - " + "true")
+        });
+
+        socket.on("disconnectCast", async (host: any, callback) => {
+            console.log(host)
+            const cast = client.devices.find((d: any) => d.host === host)
+            cast.stop(function (err: any) {
+                if (err) return console.error(err)
+                var index = devices.findIndex((d: any) => d.host === cast.host)
+                devices[index] = { host: cast.host, name: cast.friendlyName, connected: false }
+                callback({ status: true, cast: { host: cast.host, name: cast.friendlyName } })
+                console.log("updated: " + cast.host + " - " + "false")
+            })
+        });
+
+        socket.on("messageCast", async (host: any, message: any, callback) => {
+            const cast = client.devices.find((d: any) => d.host === host)
+            cast.sendMessage(message, function (response: any) {
+                callback({ status: true, response: response })
+            })
+        });
+    })
 
     app.all('*', (req: any, res: any) => nextHandler(req, res));
 
@@ -36,18 +71,35 @@ nextApp.prepare().then(async () => {
         console.log(`> Ready on http://localhost:${port}`);
     });
 
+    function getStatus(device: any) {
+        return new Promise(resolve => {
+            device.getReceiverStatus(function (err: any, status: any) {
+                if (err) return console.error(err)
+                resolve(status)
+            })
+        })
+    }
+
 
     var client = new ChromecastAPI();
-    client.on('device', function (device: any) {
-        console.log(device.friendlyName)
-        device.play("", "customreceiver", function (err: any) {
-            if (!err) console.log('Playing in your chromecast')
-        })
-        setTimeout(() => {
-            device.sendMessage({ type: 'clubId', clubId: "fc4923c2-3f2a-45c5-8a7e-078ea5a9693d" }, function (err: any) {
-                console.log(err)
+    var devices: any[] = []
+    client.on('device', async function (device: any) {
+        var connected = false
+        const status: any = await getStatus(device)
+        connected = false
+        if (status.applications) {
+            status.applications.forEach((app: any) => {
+                if (app.appId == "0AA4CA7E") {
+                    connected = true
+                }
             })
-        }, 10000)
+        }
+        var index = devices.findIndex((d: any) => d.host === device.host)
+        if (index == -1) {
+            devices.push({ host: device.host, name: device.friendlyName, connected: connected })
+        } else {
+            devices[index] = { host: device.host, name: device.friendlyName, connected: connected }
+        }
+        console.log("found: " + device.host + " - " + connected)
     })
-
 });
