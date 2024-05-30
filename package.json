@@ -10,7 +10,7 @@
     "@types/castv2": "^0.1.1",
     "@types/express": "^4.17.13",
     "castv2": "^0.1.10",
-    "chromecast-api": "file:../chromecast-api",
+    "chromecast-api": "github:sailviz/chromecast-api",
     "cross-env": "^7.0.2",
     "dotenv": "^10.0.0",
     "express": "^4.17.1",
