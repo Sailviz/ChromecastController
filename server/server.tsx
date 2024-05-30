@@ -1,9 +1,11 @@
 require('dotenv').config()
 import express, { Express } from 'express';
-import * as http from 'http';
+import * as https from 'https';
 import next, { NextApiHandler } from 'next';
 import * as socketio from 'socket.io';
 const ChromecastAPI = require('chromecast-api')
+var path = require('path');
+var fs = require('fs');
 
 if (process.env.PORT) {
     var port: number = parseInt(process.env.PORT);
@@ -15,7 +17,11 @@ const nextHandler: NextApiHandler = nextApp.getRequestHandler();
 
 nextApp.prepare().then(async () => {
     const app: Express = express();
-    const server: http.Server = http.createServer(app);
+    var options = {
+        key: fs.readFileSync(path.resolve('dist/server.key')),
+        cert: fs.readFileSync(path.resolve('dist/server.cert'))
+    };
+    const server: https.Server = https.createServer(options, app);
     const io: socketio.Server = new socketio.Server();
     io.attach(server);
 
@@ -68,7 +74,7 @@ nextApp.prepare().then(async () => {
     app.all('*', (req: any, res: any) => nextHandler(req, res));
 
     server.listen(port, () => {
-        console.log(`> Ready on http://localhost:${port}`);
+        console.log(`> Ready on https://localhost:${port}`);
     });
 
     function getStatus(device: any) {
