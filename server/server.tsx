@@ -42,6 +42,9 @@ nextApp.prepare().then(async () => {
         socket.on("connectCast", async (host: any, callback) => {
             console.log(host)
             const cast = client.devices.find((d: any) => d.host === host)
+            if (cast == undefined) {
+                callback({ status: false, cast: {} })
+            }
             cast.play("", "customreceiver", function (err: any) {
                 if (!err) callback({ status: true, cast: { host: cast.host, name: cast.friendlyName } })
             })
@@ -54,6 +57,9 @@ nextApp.prepare().then(async () => {
         socket.on("disconnectCast", async (host: any, callback) => {
             console.log(host)
             const cast = client.devices.find((d: any) => d.host === host)
+            if (cast == undefined) {
+                callback({ status: false, cast: {} })
+            }
             cast.stop(function (err: any) {
                 if (err) return console.error(err)
                 var index = devices.findIndex((d: any) => d.host === cast.host)
@@ -65,6 +71,9 @@ nextApp.prepare().then(async () => {
 
         socket.on("messageCast", async (host: any, message: any, callback) => {
             const cast = client.devices.find((d: any) => d.host === host)
+            if (cast == undefined) {
+                callback({ status: false, cast: {} })
+            }
             cast.sendMessage(message, function (response: any) {
                 callback({ status: true, response: response })
             })
