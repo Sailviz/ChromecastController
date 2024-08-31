@@ -32,7 +32,7 @@ nextApp.prepare().then(async () => {
 
         socket.on("register", async (clubId: string, callback) => {
             clubId = clubId
-            callback("success")
+            callback({ status: true })
         })
 
         socket.on("getAvailableCasts", async (callback) => {
@@ -40,25 +40,25 @@ nextApp.prepare().then(async () => {
         });
 
         socket.on("connectCast", async (host: any, callback) => {
-            console.log(host)
             const cast = client.devices.find((d: any) => d.host === host)
             if (cast == undefined) {
                 callback({ status: false, cast: {} })
+                return
             }
             cast.play("", "customreceiver", function (err: any) {
                 if (!err) callback({ status: true, cast: { host: cast.host, name: cast.friendlyName } })
-            })
-            var index = devices.findIndex((d: any) => d.host === cast.host)
-            devices[index] = { host: cast.host, name: cast.friendlyName, connected: true }
+                var index = devices.findIndex((d: any) => d.host === cast.host)
+                devices[index] = { host: cast.host, name: cast.friendlyName, connected: true }
 
-            console.log("updated: " + cast.host + " - " + "true")
+                console.log("updated: " + cast.host + " - " + "true")
+            })
         });
 
         socket.on("disconnectCast", async (host: any, callback) => {
-            console.log(host)
             const cast = client.devices.find((d: any) => d.host === host)
             if (cast == undefined) {
                 callback({ status: false, cast: {} })
+                return
             }
             cast.stop(function (err: any) {
                 if (err) return console.error(err)
@@ -71,10 +71,14 @@ nextApp.prepare().then(async () => {
 
         socket.on("messageCast", async (host: any, message: any, callback) => {
             const cast = client.devices.find((d: any) => d.host === host)
-            if (cast == undefined) {
+            if (cast == undefined || cast == null) {
                 callback({ status: false, cast: {} })
+                console.log('cast not found')
+                return
             }
             cast.sendMessage(message, function (response: any) {
+                console.log('response')
+                console.log(response)
                 callback({ status: true, response: response })
             })
         });
@@ -86,35 +90,59 @@ nextApp.prepare().then(async () => {
         console.log(`> Ready on https://localhost:${port}`);
     });
 
-    function getStatus(device: any) {
-        return new Promise(resolve => {
-            device.getReceiverStatus(function (err: any, status: any) {
-                if (err) return console.error(err)
-                resolve(status)
-            })
-        })
-    }
+    // function getStatus(device: any) {
+    //     return new Promise(resolve => {
+    //         device.getReceiverStatus(function (err: any, status: any) {
+    //             if (err) return console.error(err)
+    //             resolve(status)
+    //         })
+    //     })
+    // }
 
 
     var client = new ChromecastAPI();
     var devices: any[] = []
     client.on('device', async function (device: any) {
-        var connected = false
-        const status: any = await getStatus(device)
-        connected = false
-        if (status.applications) {
-            status.applications.forEach((app: any) => {
-                if (app.appId == "0AA4CA7E") {
-                    connected = true
-                }
-            })
-        }
-        var index = devices.findIndex((d: any) => d.host === device.host)
-        if (index == -1) {
-            devices.push({ host: device.host, name: device.friendlyName, connected: connected })
-        } else {
-            devices[index] = { host: device.host, name: device.friendlyName, connected: connected }
-        }
-        console.log("found: " + device.host + " - " + connected)
+        console.log(device)
+        device.play("", "customreceiver")
+        devices.push({ host: device.host, name: device.name, status: 'connected' })
+
+        setInterval(async function () {
+            try {
+                console.log('forcing device ' + device.friendlyName + ' to play')
+                device.play("", "customreceiver")
+            } catch (err) {
+                console.log('device ' + device.friendlyName + ' not found')
+            }
+        }, 10000)
+
+
+        // device.play('http://commondatastorage.googleapis.com/gtv-videos-bucket/big_buck_bunny_1080p.mp4', "media")
+        //if we try and message the device to see if our application is alive, we can get the status of the device
+        // device.sendMessage({ type: 'PING' }, function (response: any)
+        // if we get a response, we can assume the device is alive
+        // if not, we can assume the device is dead, and we can realive it.
+
+        device.on('status', async function (status: any) {
+            //check if the device is configured to a player
+            if (status.player != undefined) {
+                status.sendMessage({ type: 'clubId', data: '', id: '' }, async function (response: any) {
+                    console.log('response')
+                    console.log(response)
+                    if (response == 'success') {
+                        //do nothing, device is already configured
+                    } else {
+                        device.play("", "customreceiver")
+                    }
+                })
+            } else {
+                //if the device is not playing then we can play a video
+                device.play("", "customreceiver")
+            }
+        })
     })
 });
+
+
+// IF THERE IS AN ERROR ABOUT ERR_OSSL_EVP_UNSUPPORTED, TRY THIS:
+// set NODE_OPTIONS=--openssl-legacy-provider
