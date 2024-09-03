@@ -16,6 +16,7 @@ const nextApp = next({ dev });
 const nextHandler: NextApiHandler = nextApp.getRequestHandler();
 
 nextApp.prepare().then(async () => {
+    var clubId = ""
     const app: Express = express();
     var options = {
         key: fs.readFileSync(path.resolve('dist/server.key')),
@@ -71,6 +72,9 @@ nextApp.prepare().then(async () => {
 
         socket.on("messageCast", async (host: any, message: any, callback) => {
             const cast = client.devices.find((d: any) => d.host === host)
+            if (message.data['type'] == 'clubId') {
+                clubId = (message.data['clubId'])
+            }
             if (cast == undefined || cast == null) {
                 callback({ status: false, cast: {} })
                 console.log('cast not found')
@@ -111,6 +115,7 @@ nextApp.prepare().then(async () => {
             try {
                 console.log('forcing device ' + device.friendlyName + ' to play')
                 device.play("", "customreceiver")
+                device.sendMessage({ type: "clubId", clubId: clubId })
             } catch (err) {
                 console.log('device ' + device.friendlyName + ' not found')
             }
